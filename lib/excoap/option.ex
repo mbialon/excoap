@@ -28,6 +28,69 @@ defmodule Excoap.Option do
 		{value, rest}
 	end
 
+  def encode(name, value, delta) do
+    d = Excoap.Option.number(name) - delta
+    len = byte_size(value)
+    {<<
+    encode_delta(d) :: size(4),
+    encode_length(len) :: size(4),
+    encode_delta_ext(d) :: binary,
+    encode_length_ext(len) :: binary,
+    value :: binary>>, delta + d}
+  end
+
+  defp encode_delta(delta) do
+    cond do
+      delta > 255 -> 14
+      delta > 12  -> 13
+      true        -> delta
+    end
+  end
+
+  defp encode_delta_ext(delta) do
+    cond do
+      delta > 255 -> <<delta - 269 :: size(16)>>
+      delta > 12  -> <<delta - 13 :: size(8)>>
+      true        -> <<>>
+    end
+  end
+
+  defp encode_length(length) do
+    cond do
+      length > 255 -> 14
+      length > 12  -> 13
+      true         -> length
+    end
+  end
+
+  defp encode_length_ext(length) do
+    cond do
+      length > 255 -> <<length - 269 :: size(16)>>
+      length > 12  -> <<length - 13 :: size(8)>>
+      true         -> <<>>
+    end
+  end
+
+  def number(name) do
+    case name do
+			:if_match -> 1
+			:uri_host -> 3
+			:etag -> 4
+			:if_none_match -> 5
+			:uri_port -> 7
+			:location_path -> 8
+			:uri_path -> 11
+			:content_format -> 12
+			:max_age -> 14
+			:uri_query -> 15
+			:accept -> 17
+			:location_query -> 20
+			:proxy_uri -> 35
+			:proxy_scheme -> 39
+			:size1 -> 60
+		end
+  end
+
 	def name(num) do
 		case num do
 			1  -> :if_match
@@ -45,7 +108,6 @@ defmodule Excoap.Option do
 			35 -> :proxy_uri
 			39 -> :proxy_scheme
 			60 -> :size1
-			_  -> num
 		end
 	end
 end
